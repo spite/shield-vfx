@@ -24,6 +24,7 @@ import {
   UnsignedByteType,
   TorusKnotBufferGeometry,
   PointLight,
+  FloatType,
 } from "../third_party/three.module.js";
 import { OrbitControls } from "../third_party/OrbitControls.js";
 import { Shield } from "./shield.js";
@@ -33,6 +34,7 @@ import { ShaderPass } from "./ShaderPass.js";
 import { ShaderPingPongPass } from "./ShaderPingPongPass.js";
 import { OBJLoader } from "../third_party/OBJLoader.js";
 import { SubdivisionModifier } from "../third_party/SubdivisionModifier.js";
+//import { Post } from "./post.js";
 
 import { shader as depthVertexShader } from "../shaders/depth-vs.js";
 import { shader as depthFragmentShader } from "../shaders/depth-fs.js";
@@ -53,6 +55,9 @@ renderer.setClearColor(0, 1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.outputEncoding = sRGBEncoding;
+renderer.gammaFactor = 2.2;
+
+//const post = new Post(renderer);
 
 document.body.append(renderer.domElement);
 
@@ -89,7 +94,11 @@ const depthMaterial = new RawShaderMaterial({
   vertexShader: depthVertexShader,
   fragmentShader: depthFragmentShader,
 });
-const mat = new MeshStandardMaterial();
+const mat = new MeshStandardMaterial({
+  color: 0xbd3e30,
+  roughness: 0.4,
+  metalness: 0.0,
+});
 const mesh = new Mesh(new TorusKnotBufferGeometry(0.5, 0.2, 200, 50), mat);
 mesh.castShadow = mesh.receiveShadow = true;
 //scene.add(mesh);
@@ -151,10 +160,17 @@ function resize() {
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
   depth.setSize(width * dPR, height * dPR);
+  hdr.setSize(width * dPR, height * dPR);
   shield.material.uniforms.resolution.value.set(width * dPR, height * dPR);
+  //post.setSize(width * dPR, height * dPR);
 }
 
 const depth = getFBO(1, 1, {
+  format: RGBAFormat,
+  type: UnsignedByteType,
+});
+
+const hdr = getFBO(1, 1, {
   format: RGBAFormat,
   type: UnsignedByteType,
 });
@@ -187,7 +203,12 @@ function render() {
   renderer.setRenderTarget(null);
   shield.mesh.visible = true;
   scene.overrideMaterial = null;
+  //renderer.setRenderTarget(hdr);
   renderer.render(scene, camera);
+  //renderer.setRenderTarget(null);
+
+  //post.combine.shader.uniforms.inputTexture.value = hdr.texture;
+  //post.render();
 
   renderer.setAnimationLoop(render);
 }
